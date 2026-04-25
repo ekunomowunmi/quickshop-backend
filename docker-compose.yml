@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: quickshop_db
+    environment:
+      POSTGRES_DB: quickshop_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - quickshop_db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d quickshop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: quickshop_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@quickshop.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - quickshop_pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+
+volumes:
+  quickshop_db_data:
+  quickshop_pgadmin_data:
