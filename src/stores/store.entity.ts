@@ -45,6 +45,15 @@ export class Store {
   @Column({ type: 'boolean', name: 'is_active', default: true })
   isActive!: boolean;
 
+  @Column({ type: 'boolean', name: 'delivery_available', default: false })
+  deliveryAvailable!: boolean;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, name: 'base_delivery_fee', nullable: true })
+  baseDeliveryFee!: string | null;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, name: 'per_km_fee', nullable: true })
+  perKmFee!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

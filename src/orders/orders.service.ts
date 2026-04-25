@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
-import { Order, OrderStatus } from './order.entity';
+import { FulfillmentType, Order, OrderStatus, PaymentMethod } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CompleteOrderDto } from './dto/complete-order.dto';
@@ -75,7 +75,12 @@ export class OrdersService {
 
     const store = await this.storesRepo.findOne({
       where: { id: dto.store_id },
-      select: { id: true },
+      select: {
+        id: true,
+        deliveryAvailable: true,
+        baseDeliveryFee: true,
+        perKmFee: true,
+      },
     });
     if (!store) throw new BadRequestException('store_id does not exist');
 
@@ -113,6 +118,70 @@ export class OrdersService {
       totalCents += toCents(product.price) * BigInt(item.quantity);
     }
 
+    let deliveryFeeCents: bigint | null = null;
+    let deliveryAddress: string | null = null;
+    let deliveryLat: number | null = null;
+    let deliveryLng: number | null = null;
+
+    if (dto.fulfillment_type === FulfillmentType.DELIVERY) {
+      if (!store.deliveryAvailable) {
+        throw new BadRequestException('Store does not offer delivery');
+      }
+
+      if (dto.payment_method !== PaymentMethod.ONLINE) {
+        throw new BadRequestException('Delivery orders must use payment_method = ONLINE');
+      }
+
+      if (!Number.isFinite(dto.delivery_lat) || !Number.isFinite(dto.delivery_lng)) {
+        throw new BadRequestException('delivery_lat and delivery_lng are required for DELIVERY');
+      }
+
+      if (store.baseDeliveryFee == null || store.perKmFee == null) {
+        throw new BadRequestException('Store delivery fees are not configured');
+      }
+
+      const [{ distance_meters }] = await this.storesRepo.query(
+        `
+        SELECT
+          ST_Distance(
+            s.location,
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+          )::float8 AS distance_meters
+        FROM stores s
+        WHERE s.id = $3
+        `,
+        [dto.delivery_lng, dto.delivery_lat, dto.store_id],
+      );
+
+      const meters = Number(distance_meters);
+      if (!Number.isFinite(meters)) {
+        throw new BadRequestException('Failed to calculate delivery distance');
+      }
+
+      const distanceKm = meters / 1000;
+      const base = Number(store.baseDeliveryFee);
+      const perKm = Number(store.perKmFee);
+      if (!Number.isFinite(base) || !Number.isFinite(perKm) || base < 0 || perKm < 0) {
+        throw new BadRequestException('Invalid store delivery fee configuration');
+      }
+
+      let fee = base + distanceKm * perKm;
+      fee = Math.min(fee, 5000);
+
+      deliveryFeeCents = BigInt(Math.round(fee * 100));
+      totalCents += deliveryFeeCents;
+
+      deliveryAddress = dto.delivery_address ?? null;
+      deliveryLat = dto.delivery_lat ?? null;
+      deliveryLng = dto.delivery_lng ?? null;
+    } else {
+      // PICKUP flow: delivery fields must be null
+      deliveryFeeCents = null;
+      deliveryAddress = null;
+      deliveryLat = null;
+      deliveryLng = null;
+    }
+
     const pickupCode = generatePickupCode();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -121,7 +190,13 @@ export class OrdersService {
         userId: dto.user_id,
         storeId: dto.store_id,
         status: OrderStatus.PLACED,
+        fulfillmentType: dto.fulfillment_type,
         totalAmount: centsToDecimalString(totalCents),
+        deliveryFee: deliveryFeeCents == null ? null : centsToDecimalString(deliveryFeeCents),
+        deliveryAddress,
+        deliveryLat: deliveryLat == null ? null : deliveryLat.toFixed(6),
+        deliveryLng: deliveryLng == null ? null : deliveryLng.toFixed(6),
+        paymentMethod: dto.payment_method,
         pickupCode,
         expiresAt,
       });

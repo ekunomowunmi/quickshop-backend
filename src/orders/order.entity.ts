@@ -23,6 +23,16 @@ export enum OrderStatus {
   EXPIRED = 'EXPIRED',
 }
 
+export enum FulfillmentType {
+  PICKUP = 'PICKUP',
+  DELIVERY = 'DELIVERY',
+}
+
+export enum PaymentMethod {
+  ONLINE = 'ONLINE',
+  CASH = 'CASH',
+}
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -50,8 +60,38 @@ export class Order {
   })
   status!: OrderStatus;
 
+  @Column({
+    type: 'enum',
+    enum: FulfillmentType,
+    enumName: 'fulfillment_type',
+    name: 'fulfillment_type',
+    default: FulfillmentType.PICKUP,
+  })
+  fulfillmentType!: FulfillmentType;
+
   @Column({ type: 'numeric', precision: 12, scale: 2, name: 'total_amount' })
   totalAmount!: string;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, name: 'delivery_fee', nullable: true })
+  deliveryFee!: string | null;
+
+  @Column({ type: 'text', name: 'delivery_address', nullable: true })
+  deliveryAddress!: string | null;
+
+  @Column({ type: 'numeric', precision: 10, scale: 6, name: 'delivery_lat', nullable: true })
+  deliveryLat!: string | null;
+
+  @Column({ type: 'numeric', precision: 10, scale: 6, name: 'delivery_lng', nullable: true })
+  deliveryLng!: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+    enumName: 'payment_method',
+    name: 'payment_method',
+    default: PaymentMethod.ONLINE,
+  })
+  paymentMethod!: PaymentMethod;
 
   @Column({ type: 'varchar', length: 64, name: 'pickup_code' })
   pickupCode!: string;

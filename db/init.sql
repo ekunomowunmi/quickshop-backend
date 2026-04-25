@@ -1,8 +1,5 @@
 -- Quickshop local database initialization
 -- Runs automatically on first container startup (fresh volume).
-USE quickshop_db;
-
-SELECT * FROM stores
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
@@ -39,6 +36,20 @@ BEGIN
       'REFUNDED'
     );
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fulfillment_type') THEN
+    CREATE TYPE fulfillment_type AS ENUM (
+      'PICKUP',
+      'DELIVERY'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
+    CREATE TYPE payment_method AS ENUM (
+      'ONLINE',
+      'CASH'
+    );
+  END IF;
 END
 $$;
 
@@ -61,6 +72,9 @@ CREATE TABLE IF NOT EXISTS stores (
   address TEXT NOT NULL,
   location GEOGRAPHY(Point, 4326) NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  delivery_available BOOLEAN NOT NULL DEFAULT FALSE,
+  base_delivery_fee NUMERIC(12, 2) NULL CHECK (base_delivery_fee >= 0),
+  per_km_fee NUMERIC(12, 2) NULL CHECK (per_km_fee >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -68,10 +82,10 @@ CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
+  description TEXT NULL,
   price NUMERIC(12, 2) NOT NULL CHECK (price >= 0),
   stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  image_url TEXT NOT NULL DEFAULT '',
+  image_url TEXT NULL,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -81,9 +95,15 @@ CREATE TABLE IF NOT EXISTS orders (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   status order_status NOT NULL DEFAULT 'PLACED',
+  fulfillment_type fulfillment_type NOT NULL DEFAULT 'PICKUP',
   total_amount NUMERIC(12, 2) NOT NULL CHECK (total_amount >= 0),
+  delivery_fee NUMERIC(12, 2) NULL CHECK (delivery_fee >= 0),
+  delivery_address TEXT NULL,
+  delivery_lat NUMERIC(10, 6) NULL,
+  delivery_lng NUMERIC(10, 6) NULL,
+  payment_method payment_method NOT NULL DEFAULT 'ONLINE',
   pickup_code VARCHAR(64) NOT NULL,
-  expires_at TIMESTAMPTZ NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
