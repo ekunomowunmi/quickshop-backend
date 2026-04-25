@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { StoresService } from './stores.service';
+import { Public } from '../auth/public.decorator';
 
 @Controller('stores')
 export class StoresController {
@@ -12,6 +13,7 @@ export class StoresController {
   }
 
   @Get('nearby')
+  @Public()
   async getNearbyStores(
     @Query('lat') lat: string,
     @Query('lng') lng: string,

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 import { User, UserRole } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -58,6 +58,20 @@ export class UsersService {
       }
       throw new InternalServerErrorException('Failed to create user');
     }
+  }
+
+  findById(id: string) {
+    return this.usersRepo.findOne({
+      where: { id },
+      select: { id: true, role: true, phone: true, email: true, name: true },
+    });
+  }
+
+  findByPhoneWithPasswordHash(phone: string) {
+    return this.usersRepo.findOne({
+      where: { phone },
+      select: { id: true, role: true, passwordHash: true },
+    });
   }
 }
 

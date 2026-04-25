@@ -19,6 +19,8 @@ export BASE_URL="http://localhost:3000"
 
 ## 1) Create users
 
+> You can create users either via `/users` (direct) or `/auth/register` (returns a JWT immediately).
+
 ### Create a Store Owner
 
 ```bash
@@ -38,6 +40,36 @@ Copy the returned `id` into an env var:
 export OWNER_ID="REPLACE_WITH_OWNER_ID"
 ```
 
+### (Recommended) Register + get JWT (Store Owner)
+
+```bash
+curl -sS -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shop Owner 2",
+    "phone": "08011113333",
+    "password": "123456",
+    "role": "STORE_OWNER"
+  }'
+```
+
+### Login (Store Owner)
+
+```bash
+curl -sS -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "08011112222",
+    "password": "123456"
+  }'
+```
+
+If you want to use the token in later requests, copy `access_token` into:
+
+```bash
+export OWNER_TOKEN="REPLACE_WITH_JWT"
+```
+
 ### Create a Customer
 
 ```bash
@@ -55,6 +87,23 @@ Copy the returned `id`:
 
 ```bash
 export CUSTOMER_ID="REPLACE_WITH_CUSTOMER_ID"
+```
+
+### Login (Customer)
+
+```bash
+curl -sS -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "08099998888",
+    "password": "123456"
+  }'
+```
+
+Copy `access_token` if needed:
+
+```bash
+export CUSTOMER_TOKEN="REPLACE_WITH_JWT"
 ```
 
 ## 2) Create a store (must be STORE_OWNER)
