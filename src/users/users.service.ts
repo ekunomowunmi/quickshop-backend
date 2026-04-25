@@ -70,7 +70,7 @@ export class UsersService {
   findByPhoneWithPasswordHash(phone: string) {
     return this.usersRepo.findOne({
       where: { phone },
-      select: { id: true, role: true, passwordHash: true },
+      select: { id: true, role: true, name: true, passwordHash: true },
     });
   }
 }

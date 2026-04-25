@@ -22,7 +22,7 @@ export class AuthService {
 
     return {
       access_token: accessToken,
-      user: { id: user.id, role: user.role },
+      user: { id: user.id, name: user.name, role: user.role },
     };
   }
 
@@ -40,7 +40,7 @@ export class AuthService {
 
     return {
       access_token: accessToken,
-      user: { id: user.id, role: user.role },
+      user: { id: user.id, name: user.name, role: user.role },
     };
   }
 }
