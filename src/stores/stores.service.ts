@@ -4,12 +4,14 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { User, UserRole } from '../users/user.entity';
+import { UpdateStoreDto } from './dto/update-store.dto';
 
 @Injectable()
 export class StoresService {
@@ -122,6 +124,44 @@ export class StoresService {
     
   
     return rows;
+  }
+
+  async update(storeId: string, currentUserId: string, dto: UpdateStoreDto) {
+    const store = await this.storesRepo.findOne({ where: { id: storeId } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    if (!currentUserId || store.ownerId !== currentUserId) {
+      throw new ForbiddenException('You do not own this store');
+    }
+
+    if (dto.name !== undefined) store.name = dto.name;
+    if (dto.phone !== undefined) store.phone = dto.phone;
+    if (dto.address !== undefined) store.address = dto.address;
+
+    // Delivery settings
+    if (dto.delivery_available !== undefined) {
+      store.deliveryAvailable = dto.delivery_available;
+    }
+    if (dto.base_delivery_fee !== undefined) {
+      store.baseDeliveryFee = dto.base_delivery_fee.toFixed(2);
+    }
+    if (dto.per_km_fee !== undefined) {
+      store.perKmFee = dto.per_km_fee.toFixed(2);
+    }
+
+    return this.storesRepo.save(store);
+  }
+
+  async softDelete(storeId: string, currentUserId: string) {
+    const store = await this.storesRepo.findOne({ where: { id: storeId } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    if (!currentUserId || store.ownerId !== currentUserId) {
+      throw new ForbiddenException('You do not own this store');
+    }
+
+    store.isActive = false;
+    return this.storesRepo.save(store);
   }
 }
 
