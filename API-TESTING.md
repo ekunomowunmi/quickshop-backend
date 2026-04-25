@@ -110,6 +110,7 @@ export CUSTOMER_TOKEN="REPLACE_WITH_JWT"
 
 ```bash
 curl -sS -X POST "$BASE_URL/stores" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
     \"ownerId\": \"$OWNER_ID\",
@@ -127,6 +128,41 @@ Copy the returned `id`:
 export STORE_ID="REPLACE_WITH_STORE_ID"
 ```
 
+### Merchant: get my stores
+
+```bash
+curl -sS "$BASE_URL/stores/my" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+```
+
+### Merchant: get products for my store (ownership enforced)
+
+```bash
+curl -sS "$BASE_URL/stores/$STORE_ID/products" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+```
+
+### Update store (ownership enforced)
+
+```bash
+curl -sS -X PATCH "$BASE_URL/stores/$STORE_ID" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Store Name",
+    "delivery_available": true,
+    "base_delivery_fee": 500,
+    "per_km_fee": 120
+  }'
+```
+
+### Soft-delete store (sets is_active=false)
+
+```bash
+curl -sS -X DELETE "$BASE_URL/stores/$STORE_ID" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+```
+
 ### Nearby stores
 
 ```bash
@@ -137,6 +173,7 @@ curl -sS "$BASE_URL/stores/nearby?lat=6.45&lng=3.4"
 
 ```bash
 curl -sS -X POST "$BASE_URL/products" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
     \"name\": \"Rice\",
@@ -154,6 +191,26 @@ Copy the returned product `id`:
 export PRODUCT_ID="REPLACE_WITH_PRODUCT_ID"
 ```
 
+### Update product (ownership enforced)
+
+```bash
+curl -sS -X PATCH "$BASE_URL/products/$PRODUCT_ID" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "price": 46000,
+    "stock": 8,
+    "is_available": true
+  }'
+```
+
+### Soft-delete product (sets is_available=false)
+
+```bash
+curl -sS -X DELETE "$BASE_URL/products/$PRODUCT_ID" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+```
+
 ### Get products by store
 
 ```bash
@@ -164,6 +221,7 @@ curl -sS "$BASE_URL/products/store/$STORE_ID"
 
 ```bash
 curl -sS -X POST "$BASE_URL/orders" \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
     \"user_id\": \"$CUSTOMER_ID\",
@@ -185,6 +243,20 @@ export PICKUP_CODE="REPLACE_WITH_PICKUP_CODE"
 
 ```bash
 curl -sS "$BASE_URL/orders/$ORDER_ID"
+```
+
+### Merchant: get all orders for my stores (includes items + product)
+
+```bash
+curl -sS "$BASE_URL/orders/my" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+```
+
+### Merchant: filter my orders by storeId
+
+```bash
+curl -sS "$BASE_URL/orders/my?storeId=$STORE_ID" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
 ```
 
 ## 5) Store workflow (accept → ready → complete)

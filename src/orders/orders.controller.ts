@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CompleteOrderDto } from './dto/complete-order.dto';
+import type { Request } from 'express';
 
 @Controller('orders')
 export class OrdersController {
@@ -10,6 +11,12 @@ export class OrdersController {
   @Post()
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
+  }
+
+  @Get('my')
+  myOrders(@Req() req: Request, @Query('storeId') storeId?: string) {
+    const user = req.user as any;
+    return this.ordersService.myOrders(user?.userId, storeId);
   }
 
   @Get(':id')

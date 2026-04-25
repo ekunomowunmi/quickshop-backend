@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
@@ -60,6 +61,38 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException('Order not found');
     return order;
+  }
+
+  async myOrders(currentUserId: string, storeId?: string) {
+    if (!currentUserId) {
+      throw new ForbiddenException('Unauthorized');
+    }
+
+    const stores = await this.storesRepo.find({
+      where: { ownerId: currentUserId },
+      select: { id: true },
+    });
+    const storeIds = stores.map((s) => s.id);
+
+    if (!storeIds.length) return [];
+
+    if (storeId) {
+      if (!storeIds.includes(storeId)) {
+        throw new ForbiddenException('You do not own this store');
+      }
+
+      return this.ordersRepo.find({
+        where: { storeId },
+        relations: { items: { product: true } },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    return this.ordersRepo.find({
+      where: { storeId: In(storeIds) },
+      relations: { items: { product: true } },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async create(dto: CreateOrderDto) {

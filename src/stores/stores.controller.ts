@@ -14,6 +14,21 @@ export class StoresController {
     return this.storesService.create(dto);
   }
 
+  @Get('my')
+  async myStores(@Req() req: Request) {
+    const user = req.user as any;
+    return this.storesService.myStores(user?.userId);
+  }
+
+  @Get(':storeId/products')
+  async storeProductsForOwner(
+    @Param('storeId') storeId: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as any;
+    return this.storesService.storeProductsForOwner(storeId, user?.userId);
+  }
+
   @Patch(':id')
   async updateStore(
     @Param('id') id: string,

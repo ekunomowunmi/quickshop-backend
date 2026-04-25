@@ -12,6 +12,7 @@ import { Store } from './store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { User, UserRole } from '../users/user.entity';
 import { UpdateStoreDto } from './dto/update-store.dto';
+import { Product } from '../products/product.entity';
 
 @Injectable()
 export class StoresService {
@@ -20,6 +21,8 @@ export class StoresService {
     private readonly storesRepo: Repository<Store>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    @InjectRepository(Product)
+    private readonly productsRepo: Repository<Product>,
   ) {}
 
   async create(dto: CreateStoreDto) {
@@ -162,6 +165,28 @@ export class StoresService {
 
     store.isActive = false;
     return this.storesRepo.save(store);
+  }
+
+  async myStores(currentUserId: string) {
+    console.log('currentUserId', currentUserId);
+    return this.storesRepo.find({
+      where: { ownerId: currentUserId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async storeProductsForOwner(storeId: string, currentUserId: string) {
+    const store = await this.storesRepo.findOne({ where: { id: storeId } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    if (!currentUserId || store.ownerId !== currentUserId) {
+      throw new ForbiddenException('You do not own this store');
+    }
+
+    return this.productsRepo.find({
+      where: { storeId },
+      order: { createdAt: 'DESC' },
+    });
   }
 }
 
