@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateStoreDto {
   @IsUUID()
@@ -15,15 +15,17 @@ export class CreateStoreDto {
   address!: string;
 
   @Type(() => Number)
+  @IsOptional()
   @IsNumber()
   @Min(-90)
   @Max(90)
-  latitude!: number;
+  latitude?: number;
 
   @Type(() => Number)
+  @IsOptional()
   @IsNumber()
   @Min(-180)
   @Max(180)
-  longitude!: number;
+  longitude?: number;
 }
 

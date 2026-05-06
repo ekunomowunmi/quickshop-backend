@@ -13,6 +13,7 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { User, UserRole } from '../users/user.entity';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { Product } from '../products/product.entity';
+import { GeocodingService } from '../common/geocoding/geocoding.service';
 
 @Injectable()
 export class StoresService {
@@ -23,13 +24,23 @@ export class StoresService {
     private readonly usersRepo: Repository<User>,
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
+    private readonly geocodingService: GeocodingService,
   ) {}
 
   async create(dto: CreateStoreDto) {
-    const { ownerId, name, phone, address, latitude, longitude } = dto;
+    const { ownerId, name, phone, address } = dto;
+    let latitude = dto.latitude;
+    let longitude = dto.longitude;
 
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      throw new BadRequestException('latitude and longitude must be valid numbers');
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      // ok
+    } else {
+      if (!address?.trim()) {
+        throw new BadRequestException('Provide either latitude+longitude or address');
+      }
+      const geo = await this.geocodingService.geocodeAddress(address);
+      latitude = geo.latitude;
+      longitude = geo.longitude;
     }
 
     const owner = await this.usersRepo.findOne({
@@ -129,6 +140,23 @@ export class StoresService {
     return rows;
   }
 
+  async nearbyByInput(input: { latitude?: number; longitude?: number; address?: string }) {
+    const lat = input.latitude;
+    const lng = input.longitude;
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return this.nearby(Number(lat), Number(lng));
+    }
+
+    if (!input.address?.trim()) {
+      throw new BadRequestException('Provide either latitude+longitude or address');
+    }
+
+    const geo = await this.geocodingService.geocodeAddress(input.address);
+    console.log('geo', geo);
+    return this.nearby(geo.latitude, geo.longitude);
+  }
+
   async update(storeId: string, currentUserId: string, dto: UpdateStoreDto) {
     const store = await this.storesRepo.findOne({ where: { id: storeId } });
     if (!store) throw new NotFoundException('Store not found');
@@ -168,7 +196,6 @@ export class StoresService {
   }
 
   async myStores(currentUserId: string) {
-    console.log('currentUserId', currentUserId);
     return this.storesRepo.find({
       where: { ownerId: currentUserId },
       order: { createdAt: 'DESC' },
