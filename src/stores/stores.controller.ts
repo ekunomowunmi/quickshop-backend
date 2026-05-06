@@ -4,6 +4,7 @@ import { StoresService } from './stores.service';
 import { Public } from '../auth/public.decorator';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import type { Request } from 'express';
+import { NearbyStoresDto } from './dto/nearby-stores.dto';
 
 @Controller('stores')
 export class StoresController {
@@ -52,6 +53,12 @@ export class StoresController {
     @Query('lng') lng: string,
   ) {
     return this.storesService.nearby(Number(lat), Number(lng));
+  }
+
+  @Post('nearby')
+  @Public()
+  async nearbyPost(@Body() dto: NearbyStoresDto) {
+    return this.storesService.nearbyByInput(dto);
   }
 }
 
